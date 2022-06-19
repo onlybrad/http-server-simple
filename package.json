@@ -1,0 +1,15 @@
+{
+  "name": "http-server-simple",
+  "version": "1.0.0",
+  "description": "http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "http",
+    "server"
+  ],
+  "author": "Only Brad",
+  "license": "MIT"
+}
