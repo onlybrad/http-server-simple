@@ -39,7 +39,7 @@ module.exports = class Response extends http.ServerResponse {
      * @param {any} text 
      */
     json(text) {
-        if(text === undefined) return this;
+        if(text === undefined) return this.end();
 
         if(typeof text === "object") {
             text = JSON.stringify(text);

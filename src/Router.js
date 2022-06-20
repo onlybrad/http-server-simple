@@ -2,11 +2,14 @@
 /** @typedef {function(import("./Request"), import("./Response"), function)} Middleware */
 /** @typedef {{ path: string, params: Object<number,string>, middlewares: Middleware[] }} RouteMiddlewares */
 /** @typedef {Object<number,string>} Params */
+/** @typedef {function(Router)} PrefixCallback */
 
-module.exports = class Router {
+class Router {
 
     /** @type {RouteMiddlewares[]} */
     #routes = [];
+
+    #prefix = "";
 
     constructor() {
         this.#initiateRoutesArray();
@@ -68,6 +71,15 @@ module.exports = class Router {
      * @returns {RouteMiddlewares | null}
      */
     findRoute(path, method) {
+        if(!path.startsWith(this.#prefix)) return null;
+
+        path = path.slice(this.#prefix.length);
+        path = path.charAt(0) === "/" ? path : "/"+path;
+
+        if(path !== "/") {
+            path = path.endsWith("/") ? path.slice(0,-1) : path;
+        }
+
         /** @type {RouteMiddlewares} */
         const routes = this.#routes[method];
 
@@ -89,9 +101,13 @@ module.exports = class Router {
             return;
         }
 
+        if(path !== "/") {
+            path = path.endsWith("/") ? path.slice(0,-1) : path;
+        }
+
         const route = this.findRoute(path, method);
         const params = getParams(path);
-        
+
         if (route) {
             route.path = path;
             route.middlewares = middlewares;
@@ -113,7 +129,9 @@ module.exports = class Router {
      * @param {string} path 
      * @param {Params} routeParams 
      */
-    static getParams(path, routeParams) {
+    getParams(path, routeParams) {
+        path = path.slice(this.#prefix.length);
+
         const pathArr = path.split("/").splice(1);
         const params = {}
 
@@ -122,6 +140,17 @@ module.exports = class Router {
         });
 
         return params;
+    }
+
+    /**
+     * @param {string} prefix
+     * @param {PrefixCallback} cb 
+     */
+    static prefix(prefix,cb) {
+        const router = new this();
+        router.#prefix = prefix;
+        cb(router);
+        return router;
     }
 }
 
@@ -135,8 +164,8 @@ const methods = [
  * @param {string} path 
  */
 function matchParams(routerPath, path) {
-    routerPath = routerPath.split("/");
-    path = path.split("/");
+    routerPath = routerPath.split("/").splice(1);
+    path = path.split("/").splice(1);
 
     if(routerPath.length !== path.length) {
         return false;
@@ -167,3 +196,5 @@ function getParams(path) {
 
     return params;
 }
+
+module.exports = Router;

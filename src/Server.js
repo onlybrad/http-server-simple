@@ -9,18 +9,23 @@ const Response = require("./Response");
  * @typedef {import("./Router").Middleware} Middleware
  * @typedef {import("./Router").Params} Params
  * @typedef {{router: Router, middlewares: Middleware[]}} RouterMiddlewares
+ * @typedef {{routers: Router[], middlewares: Middleware[]}} RoutersMiddlewares
  */
 
 module.exports = class Server {
+    static Router = Router;
 
     /** @type {http.Server}*/
-    #server
+    #server;
 
     /** @type {Middleware}*/
     #notFoundHandler;
 
-    /** @type {Object<string, RouterMiddlewares>}} */
+    /** @type {Object<string, RoutersMiddlewares>}} */
     #routers = {};
+
+    /** @type {Object<string, {middlewares: Middleware[], params: Object<string,string>}} */
+    #cache = {};
 
     constructor() {
         this.notFoundHandler(require("./middlewares/defaultNotFoundHandler"));
@@ -44,15 +49,17 @@ module.exports = class Server {
     /**
      * 
      * @param {string} root 
-     * @param {Router} router
-     * @param {Middleware[] | undefined} [middlewares]
+     * @param {Router[]} routers
+     * @param {Middleware[]} [middlewares]
      */
-    router(root, router, ...middlewares) {
-        if (!root || !(router instanceof Router)) {
-            return;
+    router(root, routers, ...middlewares) {
+        if (!root) return;
+
+        if(!Array.isArray(routers)) {
+            routers = [routers];
         }
 
-        this.#routers[root] = { router, middlewares };
+        this.#routers[root] = { routers, middlewares };
 
         return this;
     }
@@ -108,8 +115,6 @@ module.exports = class Server {
         return this;
     }
 
-    static Router = Router;
-
     /**
      * @param {Methods} method
      * @param {string} path
@@ -123,7 +128,7 @@ module.exports = class Server {
             router = new Router();
             this.router("/", router);
         } else {
-            router = routersMiddlewares.router;
+            router = routersMiddlewares.routers[0];
         }
 
         router.addRoute(method, path, ...middlewares);
@@ -146,16 +151,19 @@ module.exports = class Server {
 
         for (const rootAndPath of rootsAndPaths) {
             const { root, path } = rootAndPath;
-            const routerMiddlewares = this.#routers[root];
-            const routeMiddlewares = routerMiddlewares.router.findRoute(path, method);
-
-            if (routeMiddlewares) {
-                return {
-                    path,
-                    routerMiddlewares,
-                    routeMiddlewares
-                };
+            const routersMiddlewares = this.#routers[root];
+            
+            for(const router of routersMiddlewares.routers) {
+                const routeMiddlewares = router.findRoute(path, method);
+                if (routeMiddlewares) {
+                    return {
+                        path,
+                        routerMiddlewares:{router, middlewares: routersMiddlewares.middlewares},
+                        routeMiddlewares
+                    };
+                }
             }
+        
         }
 
         return nullReturn;
@@ -167,21 +175,21 @@ module.exports = class Server {
      * @param {string} pathname 
      */
     #getRouterRootsAndPaths(pathname) {
-        const splitPath = pathname.split("/");
-        const routersInfo = [];
+        const splitPath = pathname.split("/").map(word => (word.endsWith("/") ? word.slice(0,-1) : word));
+        const result = [];
 
         for (let i = 0; i < splitPath.length; i++) {
             const root = splitPath.slice(0, i + 1).join("/") || "/";
             const path = "/" + splitPath.slice(i + 1).join("/");
 
             if (this.#routers[root]) {
-                routersInfo.push(
+                result.push(
                     { root, path }
                 );
             }
         }
 
-        return routersInfo;
+        return result;
     }
 
     /**
@@ -190,15 +198,29 @@ module.exports = class Server {
      * @param {Response} res 
      */
     async #serverHandler(req, res) {
+        console.log(this.#cache);
+
+        const cache = this.#cache[req.pathname];
+
+        if(cache) {
+            req.params = cache.params;
+            return callMiddlewares(req, res, ...cache.middlewares);
+        }
+
         const { path, routerMiddlewares, routeMiddlewares } = this.#getPathAndRouterAndRoute(req.pathname, req.method);
 
         if (!routeMiddlewares) return this.#notFoundHandler(req, res);
 
         if (Object.keys(routeMiddlewares.params).length > 0) {
-            req.params = Router.getParams(path, routeMiddlewares.params);
+            req.params = routerMiddlewares.router.getParams(path, routeMiddlewares.params);
         }
 
         const middlewares = routerMiddlewares.middlewares.concat(routeMiddlewares.middlewares);
+
+        this.#cache[req.pathname] = {
+            middlewares,
+            params: req.params
+        };
 
         return callMiddlewares(req, res, ...middlewares);
     }

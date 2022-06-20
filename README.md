@@ -1,9 +1,8 @@
-http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library. In this version, this library only supports routing, route parameters and middlewares. 
+http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library. In this version, this library only supports routing, route parameters, route prefixing and middlewares. 
 
 The following methods are supported: GET, POST, PUT, PATCH, DELETE.
 
 The following are not supported in this version:
-- Trailing slashes
 - Body parsing
 ## Usage
 
@@ -42,8 +41,6 @@ const server = new Server();
 const router = new Server.Router();
 const users = require("./data/users");
 
-server.router("/user",router).listen(5000,"127.0.0.1");
-
 /* GET 127.0.0.1/user */
 router.get("/", (req,res) => {
     return res.json(users);
@@ -59,6 +56,41 @@ router.get("/", (req,res) => {
     delete user.id;
     return res.end();
 });
+
+server.router("/user",router).listen(5000,"127.0.0.1");
+
+```
+
+## Router prefix
+
+**In order to create routes within the router with the same prefix without having to repeat the prefix in each route, you can use Route.prefix()**
+
+```javascript
+const Server = require("http-server-simple");
+const server = new Server();
+const router = new Server.Router();
+const users = require("./data/users");
+const posts = require("./data/posts");
+
+const userRouter = Server.Router.prefix("/user", router => {
+    /* GET 127.0.0.1/api/v1/user */
+    router.get("/", (req,res) => res.json(users))
+
+    /* GET 127.0.0.1/api/v1/user/:id */
+    .get("/:id", (req,res) => res.json(users[req.params.id]));
+});
+
+const postRouter = Server.Router.prefix("/post", router => {
+    /* GET 127.0.0.1/api/v1/post */
+    router.get("/", (req,res) => res.json(posts))
+
+    /* GET 127.0.0.1/api/v1/post/:id */
+    .get("/:id", (req,res) => res.json(posts[req.params.id]));
+});
+
+
+server.router("/api/v1",[userRouter, postRouter])
+    .listen(5000,"127.0.0.1");
 
 ```
 
@@ -122,7 +154,7 @@ server.get("/", (req,res) => {
     const queries = req.query(); // returns {a: "1", b: "2"}
     const a = req.query("a"); //returns "1"
     const c = req.query("c"); //returns null
-    return req.end();
+    return res.end();
 });
 .listen(5000,"127.0.0.1");
 
@@ -141,7 +173,7 @@ const server = new Server();
 server.get("/user/:id", (req,res) => {
     const id = req.params.id;
 
-    return req.html(`<h1>This is user ${id}</h1>`);
+    return res.html(`<h1>This is user ${id}</h1>`);
 });
 .listen(5000,"127.0.0.1");
 

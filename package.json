@@ -1,6 +1,6 @@
 {
   "name": "http-server-simple",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library.",
   "main": "index.js",
   "scripts": {
@@ -11,5 +11,9 @@
     "server"
   ],
   "author": "Only Brad",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onlybrad/http-server-simple.git"
+  }
 }
