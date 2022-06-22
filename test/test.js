@@ -348,6 +348,7 @@ describe("Server", function () {
                     body: formData,
                 });
                 const text = await res.text();
+                server.close();
                 assert.strictEqual(text, expected);
             });
         });

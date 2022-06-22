@@ -1,4 +1,4 @@
-http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library. In this version, this library only supports routing, route parameters, route prefixing and middlewares. 
+http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library.
 
 The following methods are supported: GET, POST, PUT, PATCH, DELETE.
 
@@ -188,7 +188,7 @@ Access the body of a POST,PUT or PATCH request with req.body. The body will be p
 ```javascript
 fetch("http://127.0.0.1/user/1", {
     method: "PUT",
-    body: "name=bob&age=10"
+    body: "name=bob&age=10",
     headers: {
         "Content-Type": "application/x-www-form-urlencoded"
     }
@@ -210,9 +210,9 @@ server.put("/user/:id", (req,res) => {
     // {name: "bob", age: 10}
     const newData = req.body;
 
-    users.id = {...users.id, ...newData};
+    users[id] = {...users[id], ...newData};
 
-    return res.json(users.id);
+    return res.json(users[id]);
 })
 .listen(5000,"127.0.0.1");
 ```
