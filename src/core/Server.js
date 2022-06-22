@@ -1,16 +1,27 @@
 const http = require("http");
+const path = require("path");
 const Router = require("./Router");
 const Request = require("./Request");
 const Response = require("./Response");
+const Directory = require("../util/Directory");
 
 /**
  * @typedef {import("./Router").Methods} Methods
  * @typedef {import("./Router").RouteMiddlewares} RouteMiddlewares
  * @typedef {import("./Router").Middleware} Middleware
  * @typedef {import("./Router").Params} Params
+ * @typedef {import("../middlewares/bodyParser").BodyParserOptions} BodyParserOptions
+ * 
  * @typedef {{router: Router, middlewares: Middleware[]}} RouterMiddlewares
  * @typedef {{routers: Router[], middlewares: Middleware[]}} RoutersMiddlewares
+ * @typedef {{ useBodyParser: boolean, bodyParserOptions: BodyParserOptions }} ServerOptions
  */
+
+/** @type {ServerOptions} */
+const defaultOptions = {
+    useBodyParser: true,
+    bodyParserOptions: undefined
+}
 
 module.exports = class Server {
     static Router = Router;
@@ -24,17 +35,37 @@ module.exports = class Server {
     /** @type {Object<string, RoutersMiddlewares>}} */
     #routers = {};
 
-    /** @type {Object<string, {middlewares: Middleware[], params: Object<string,string>}} */
-    #cache = {};
+    /** @type {ServerOptions} */
+    #serverOptions;
 
-    constructor() {
-        this.notFoundHandler(require("./middlewares/defaultNotFoundHandler"));
+    /** @type {Directory} */
+    #temp;
+
+    /**
+     * 
+     * @param {ServerOptions} [serverOptions]
+     */
+    constructor(serverOptions = defaultOptions) {
+        this.#serverOptions = serverOptions;
         const options = {
             IncomingMessage: Request,
             ServerResponse: Response
         }
 
+        this.notFoundHandler(require("../middlewares/defaultNotFoundHandler"));
+
+        this.#createTempDirectories();
+
         this.#server = http.createServer(options, (req, res) => this.#serverHandler(req, res));
+
+        process.on("SIGINT", async () => {
+            await this.temp.delete();
+            process.exit();
+        });
+    }
+
+    get temp() {
+        return this.#temp;
     }
 
     /**
@@ -110,9 +141,44 @@ module.exports = class Server {
      * @param {string | undefined} host 
      */
     listen(port, host) {
-        this.#server.listen(port, host);
+        return new Promise(res => {
+            this.#server.listen(port, host, res);
+        });
+    }
 
-        return this;
+    close() {
+        return new Promise(res => {
+            this.#server.close(res);
+        });
+    }
+
+    #createTempDirectories() {
+        this.#temp = new Directory(path.resolve(__dirname, "../../temp"));
+    }
+
+    /**
+     * 
+     * @param {Request} req 
+     */
+    #getMiddlewares(req) {
+        const { path, routerMiddlewares, routeMiddlewares } = this.#getPathAndRouterAndRoute(req.pathname, req.method);
+
+        if(!routerMiddlewares) return null;
+
+        if (Object.keys(routeMiddlewares.params).length > 0) {
+            req.params = routerMiddlewares.router.getParams(path, routeMiddlewares.params);
+        }
+
+        const middlewares = [];
+
+        if(this.#serverOptions.useBodyParser) {
+            const bodyParser = require("../middlewares/bodyParser");
+            middlewares.push(bodyParser(this.#serverOptions.bodyParserOptions));
+        }
+        
+        middlewares.push(...routerMiddlewares.middlewares, ...routeMiddlewares.middlewares);
+
+        return middlewares;
     }
 
     /**
@@ -155,6 +221,7 @@ module.exports = class Server {
             
             for(const router of routersMiddlewares.routers) {
                 const routeMiddlewares = router.findRoute(path, method);
+
                 if (routeMiddlewares) {
                     return {
                         path,
@@ -195,34 +262,16 @@ module.exports = class Server {
     /**
      * 
      * @param {Request} req 
-     * @param {Response} res 
+     * @param {Response} res
      */
     async #serverHandler(req, res) {
-        console.log(this.#cache);
+        req.server = this;
 
-        const cache = this.#cache[req.pathname];
+        const middlewares = this.#getMiddlewares(req);
 
-        if(cache) {
-            req.params = cache.params;
-            return callMiddlewares(req, res, ...cache.middlewares);
-        }
+        if (!middlewares) return this.#notFoundHandler(req, res);
 
-        const { path, routerMiddlewares, routeMiddlewares } = this.#getPathAndRouterAndRoute(req.pathname, req.method);
-
-        if (!routeMiddlewares) return this.#notFoundHandler(req, res);
-
-        if (Object.keys(routeMiddlewares.params).length > 0) {
-            req.params = routerMiddlewares.router.getParams(path, routeMiddlewares.params);
-        }
-
-        const middlewares = routerMiddlewares.middlewares.concat(routeMiddlewares.middlewares);
-
-        this.#cache[req.pathname] = {
-            middlewares,
-            params: req.params
-        };
-
-        return callMiddlewares(req, res, ...middlewares);
+        callMiddlewares(req, res, ...middlewares);
     }
 }
 
@@ -238,7 +287,7 @@ module.exports = class Server {
 
     const next = getNext(req, res, middlewares, 0);
 
-    return await (middlewares[0](req, res, next));
+    await (middlewares[0](req, res, next));
 }
 
 
@@ -247,6 +296,7 @@ module.exports = class Server {
  * @param {Response} res
  * @param {Middleware[]} middlewares 
  * @param {number} index 
+ * @returns {Function}
  */
 function getNext(req, res, middlewares, index) {
     return async function () {
