@@ -8,19 +8,19 @@ The following methods are supported: GET, POST, PUT, PATCH, DELETE.
 const Server = require("http-server-simple");
 const server = new Server();
 
-/* GET 127.0.0.1/text */
+/* GET 127.0.0.1:5000/text */
 server.get("/text", (req,res) => {
     return res.text("Sending a text/plain message");
 })
-/* GET 127.0.0.1/json */
+/* GET 127.0.0.1:5000/json */
 .get("/json", (req,res) => {
     return res.json({message: "Sending an application/json message"});
 })
-/* GET 127.0.0.1/html */
+/* GET 127.0.0.1:5000/html */
 .get("/html", (req,res) => {
     return res.html("<h1>Sending a text/html message</h1>");
 })
-/* POST 127.0.0.1/ */
+/* POST 127.0.0.1:5000/ */
 .post("/", (req,res) => {
     return res.text("A post request to /");
 })
@@ -30,7 +30,7 @@ server.get("/text", (req,res) => {
 
 ## Router
 
-**Server level routing done in the previous example will implicitly create a router with the "/" root, you can create your own router with a different root**
+Server level routing done in the previous example will implicitly create a router with the "/" root, you can create your own router with a different root
 
 ```javascript
 
@@ -39,16 +39,16 @@ const server = new Server();
 const router = new Server.Router();
 const users = require("./data/users");
 
-/* GET 127.0.0.1/user */
+/* GET 127.0.0.1:5000/user */
 router.get("/", (req,res) => {
     return res.json(users);
 })
-/* GET 127.0.0.1/user/:id */
+/* GET 127.0.0.1:5000/user/:id */
 .get("/:id", (req,res) => {
     const id = req.params.id;
     return res.json(user.id);
 })
-/* DELETE 127.0.0.1/user/:id */
+/* DELETE 127.0.0.1:5000/user/:id */
 .delete("/:id", (req,res) => {
     const id = req.params.id;
     delete user.id;
@@ -71,18 +71,18 @@ const users = require("./data/users");
 const posts = require("./data/posts");
 
 const userRouter = Server.Router.prefix("/user", router => {
-    /* GET 127.0.0.1/api/v1/user */
+    /* GET 127.0.0.1:5000/api/v1/user */
     router.get("/", (req,res) => res.json(users))
 
-    /* GET 127.0.0.1/api/v1/user/:id */
+    /* GET 127.0.0.1:5000/api/v1/user/:id */
     .get("/:id", (req,res) => res.json(users[req.params.id]));
 });
 
 const postRouter = Server.Router.prefix("/post", router => {
-    /* GET 127.0.0.1/api/v1/post */
+    /* GET 127.0.0.1:5000/api/v1/post */
     router.get("/", (req,res) => res.json(posts))
 
-    /* GET 127.0.0.1/api/v1/post/:id */
+    /* GET 127.0.0.1:5000/api/v1/post/:id */
     .get("/:id", (req,res) => res.json(posts[req.params.id]));
 });
 
@@ -94,7 +94,7 @@ server.router("/api/v1",[userRouter, postRouter])
 
 ## Middleware
 
-**Route handlers are considered middlewares too. The only difference between a middleware and a handler is the use of the next function. Handlers do not use the next function, middlewares do. Not calling next in the middle of the middleware chain will hang the server. To exit a middleware chain you have to return res.text(), res.html(), res.json() or res.end()**
+Route handlers are considered middlewares too. The only difference between a middleware and a handler is the use of the next function. Handlers do not use the next function, middlewares do. Not calling next in the middle of the middleware chain will hang the server. To exit a middleware chain you have to return res.text(), res.html(), res.json() or res.end()
 
 ```javascript 
 
@@ -107,7 +107,7 @@ server.router("/router",router,(req,res,next) => {
     next();
 }).listen(5000,"127.0.0.1");
 
-/* 127.0.0.1/router/get */
+/* 127.0.0.1:5000/router/get */
 router.get("/get",
 (req,res,next) => {
     console.log("Route middlewares execute after the router middlewares.");
@@ -126,7 +126,7 @@ router.get("/get",
     return res.end();
 });
 
-/* GET 127.0.0.1/ */
+/* GET 127.0.0.1:5000/ */
 server.get("/", (req,res,next) => {
     console.log("Server level routing also supports middlewares.");
     next();
@@ -147,7 +147,7 @@ Use the req.query function to get the query parameters from the url
 const Server = require("http-server-simple");
 const server = new Server();
 
-/* GET 127.0.0.1/?a=1&b=2 */
+/* GET 127.0.0.1:5000/?a=1&b=2 */
 server.get("/", (req,res) => {
     const queries = req.query(); // returns {a: "1", b: "2"}
     const a = req.query("a"); //returns "1"
@@ -167,7 +167,7 @@ Access the dictionary of route parameters with the req.params attribute
 const Server = require("http-server-simple");
 const server = new Server();
 
-/* GET 127.0.0.1/user/:id */
+/* GET 127.0.0.1:5000/user/:id */
 server.get("/user/:id", (req,res) => {
     const id = req.params.id;
 
@@ -186,7 +186,7 @@ Access the body of a POST,PUT or PATCH request with req.body. The body will be p
 <span style="text-decoration: underline">***CLIENT SIDE (using urlencoded)*** </span>
 
 ```javascript
-fetch("http://127.0.0.1/user/1", {
+fetch("http://127.0.0.1:5000/user/1", {
     method: "PUT",
     body: "name=bob&age=10",
     headers: {
@@ -203,7 +203,7 @@ const Server = require("http-server-simple");
 const server = new Server();
 const users = require("./data/users");
 
-/* PUT 127.0.0.1/user/:id */
+/* PUT 127.0.0.1:5000/user/:id */
 server.put("/user/:id", (req,res) => {
     const id = req.params.id;
 
