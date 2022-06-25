@@ -3,12 +3,20 @@ const fs = require("fs");
 const path = require("path");
 const Server = require("../src/core/Server");
 const File = require("../src/util/File");
+const Download = require("../src/util/Download");
 
-/** @typedef {import("../src/core/Server")} Server */
 /** @typedef {import("../src/core/Request")} Request */
 /** @typedef {import("../src/core/Response")} Response */
 
-describe("Server", function () {
+
+describe("Server", async function () {
+    /** @type {Server} */
+    const server = await startServer(5001, allPreparations);
+    after(function() {
+        this.timeout(0);
+        server.close()
+    });
+
     describe("Starting and closing the server", () => {
         /** @type {Server} */
         let server;
@@ -24,19 +32,16 @@ describe("Server", function () {
         });
     });
     describe("Return text response from all method types.", () => {
-        /** @type {Server} */
-        let server;
         describe("#get", () => {
-            it("should create a GET '/' endpoint that returns the text 'test'", async () => {
-                server = await startServer(5001, returnTestPreparation);
-                const res = await fetch("http://127.0.0.1:5001");
+            it("should create a GET '/test1' endpoint that returns the text 'test'", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test1");
                 const text = await res.text();
                 assert.strictEqual(text, "test");
             });
         });
         describe("#post", () => {
-            it("should create a POST '/' endpoint that returns the text 'test'", async () => {
-                const res = await fetch("http://127.0.0.1:5001", {
+            it("should create a POST '/test1' endpoint that returns the text 'test'", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test1", {
                     method: "POST"
                 });
                 const text = await res.text();
@@ -44,8 +49,8 @@ describe("Server", function () {
             });
         });
         describe("#put", () => {
-            it("should create a PUT '/' endpoint that returns the text 'test'", async () => {
-                const res = await fetch("http://127.0.0.1:5001", {
+            it("should create a PUT '/test1' endpoint that returns the text 'test'", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test1", {
                     method: "PUT"
                 });
                 const text = await res.text();
@@ -53,8 +58,8 @@ describe("Server", function () {
             });
         });
         describe("#patch", () => {
-            it("should create a PATCH '/' endpoint that returns the text 'test'", async () => {
-                const res = await fetch("http://127.0.0.1:5001", {
+            it("should create a PATCH '/test1' endpoint that returns the text 'test'", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test1", {
                     method: "PATCH"
                 });
                 const text = await res.text();
@@ -62,30 +67,26 @@ describe("Server", function () {
             });
         });
         describe("#delete", function () {
-            it("should create a DELETE '/' endpoint that returns the text 'test'", async () => {
-                const res = await fetch("http://127.0.0.1:5001", {
+            it("should create a DELETE '/test1' endpoint that returns the text 'test'", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test1", {
                     method: "DELETE"
                 });
                 const text = await res.text();
-                server.close();
                 assert.strictEqual(text, "test");
             });
         });
     });
     describe("Extract query parameters from all method types.", () => {
-        /** @type {Server} */
-        let server;
         describe("#get", () => {
-            it("should create a GET '/' endpoint that returns the query parameters passed in the url", async () => {
-                server = await startServer(5002, extractQueryParamsPreparation);
-                const res = await fetch("http://127.0.0.1:5002?a=1&b=2");
+            it("should create a GET '/test2' endpoint that returns the query parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test2?a=1&b=2");
                 const text = await res.text();
                 assert.strictEqual(text, "1 2");
             });
         });
         describe("#post", () => {
-            it("should create a POST '/' endpoint that returns the query parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5002?a=1&b=2", {
+            it("should create a POST '/test2' endpoint that returns the query parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test2?a=1&b=2", {
                     method: "POST"
                 });
                 const text = await res.text();
@@ -93,8 +94,8 @@ describe("Server", function () {
             });
         });
         describe("#put", () => {
-            it("should create a PUT '/' endpoint that returns the query parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5002?a=3&b=4", {
+            it("should create a PUT '/test2' endpoint that returns the query parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test2?a=3&b=4", {
                     method: "PUT"
                 });
                 const text = await res.text();
@@ -102,8 +103,8 @@ describe("Server", function () {
             });
         });
         describe("#patch", () => {
-            it("should create a PATCH '/' endpoint that returns the query parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5002?a=5&b=a", {
+            it("should create a PATCH '/test2' endpoint that returns the query parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test2?a=5&b=a", {
                     method: "PATCH"
                 });
                 const text = await res.text();
@@ -111,30 +112,26 @@ describe("Server", function () {
             });
         });
         describe("#delete", () => {
-            it("should create a DELETE '/' endpoint that returns the query parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5002?a=8&b=9", {
+            it("should create a DELETE '/test2' endpoint that returns the query parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test2?a=8&b=9", {
                     method: "DELETE"
                 });
                 const text = await res.text();
-                server.close();
                 assert.strictEqual(text, "8 9");
             });
         });
     });
     describe("Extract route parameters from all method types.", () => {
-        /** @type {Server} */
-        let server;
         describe("#get", () => {
-            it("should create a GET '/' endpoint that returns the route parameters passed in the url", async () => {
-                server = await startServer(5003, extractRouteParamsPreparation);
-                const res = await fetch("http://127.0.0.1:5003/1/2");
+            it("should create a GET '/test3/:a/:b' endpoint that returns the route parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test3/1/2");
                 const text = await res.text();
                 assert.strictEqual(text, "1 2");
             });
         });
         describe("#post", () => {
-            it("should create a POST '/' endpoint that returns the route parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5003/3/hi", {
+            it("should create a POST '/test3/:a/:b' endpoint that returns the route parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test3/3/hi", {
                     method: "POST"
                 });
                 const text = await res.text();
@@ -142,8 +139,8 @@ describe("Server", function () {
             });
         });
         describe("#put", () => {
-            it("should create a PUT '/' endpoint that returns the route parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5003/a/55", {
+            it("should create a PUT '/test3/:a/:b' endpoint that returns the route parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test3/a/55", {
                     method: "PUT"
                 });
                 const text = await res.text();
@@ -151,8 +148,8 @@ describe("Server", function () {
             });
         });
         describe("#patch", () => {
-            it("should create a PATCH '/' endpoint that returns the route parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5003/welcome/3", {
+            it("should create a PATCH '/test3/:a/:b' endpoint that returns the route parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test3/welcome/3", {
                     method: "PATCH"
                 });
                 const text = await res.text();
@@ -160,51 +157,48 @@ describe("Server", function () {
             });
         });
         describe("#delete", () => {
-            it("should create a DELETE '/' endpoint that returns the route parameters passed in the url", async () => {
-                const res = await fetch("http://127.0.0.1:5003/No/6", {
+            it("should create a DELETE '/test3/:a/:b' endpoint that returns the route parameters passed in the url", async () => {
+                const res = await fetch("http://127.0.0.1:5001/test3/No/6", {
                     method: "DELETE"
                 });
                 const text = await res.text();
-                server.close();
                 assert.strictEqual(text, "No 6");
             });
         });
     });
     describe("Select the correct route", () => {
-        /** @type {Server} */
-        let server;
-        it("should select the /first route.", async () => {
-            server = await startServer(5004, multipleRoutesPreparation);
-            const res = await fetch("http://127.0.0.1:5004/first");
+        it("should select the /test4/first route.", async () => {
+            const res = await fetch("http://127.0.0.1:5001/test4/first");
             const text = await res.text();
-            assert.strictEqual(text, "/first");
+            assert.strictEqual(text, "/test4/first");
         });
-        it("should select the /first/second route.", async () => {
-            const res = await fetch("http://127.0.0.1:5004/first/second");
+        it("should select the /test4/first/second route.", async () => {
+            const res = await fetch("http://127.0.0.1:5001/test4/first/second");
             const text = await res.text();
-            assert.strictEqual(text, "/first/second");
+            assert.strictEqual(text, "/test4/first/second");
         });
-        it("should select the /first/second/third route.", async () => {
-            const res = await fetch("http://127.0.0.1:5004/first/second/third");
+        it("should select the /test4/first/second/third route.", async () => {
+            const res = await fetch("http://127.0.0.1:5001/test4/first/second/third");
             const text = await res.text();
-            server.close();
-            assert.strictEqual(text, "/first/second/third");
+            assert.strictEqual(text, "/test4/first/second/third");
+        });
+    });
+    describe("Unhandled exception", () => {
+        it("should return status code 500 if there are unhandled exception in middlewares or handlers", async () => {
+            const res = await fetch("http://127.0.0.1:5001/exception");
+
+            assert.strictEqual(res.status,500);
         });
     });
     describe("Body parser", () => {
-        /** @type {Server} */
-        let server;
         describe("Only requests with the POST, PUT and PATCH methods have access to the body.", () => {
             it("req.body should return undefined for a GET request", async () => {
-                server = await startServer(5005, bodyParserPreparation, {
-                    body: "text"
-                });
-                const res = await fetch("http://127.0.0.1:5005");
+                const res = await fetch("http://127.0.0.1:5001/test5");
                 const text = await res.text();
                 assert.strictEqual(text, "undefined");
             });
             it("req.body should return undefined for a DELETE request", async () => {
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "DELETE",
                     body: "text"
                 });
@@ -212,15 +206,23 @@ describe("Server", function () {
                 assert.strictEqual(text, "undefined");
             });
             it("req.body should return the text sent in the body for a POST request", async () => {
-                const res = await fetch("http://127.0.0.1:5005", {
-                    method: "POST",
-                    body: "text"
-                });
-                const text = await res.text();
-                assert.strictEqual(text, "text");
+                try {
+                    const res = await fetch("http://127.0.0.1:5001/test5", {
+                        method: "POST",
+                        body: "text"
+                    });
+    
+                    const text = await res.text();
+    
+                    assert.strictEqual(text, "text");
+                } catch(err) {
+                    console.error(err);
+                    throw err;
+                }
+
             });
             it("req.body should return the text sent in the body for a PUT request", async () => {
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "PUT",
                     body: "text"
                 });
@@ -228,7 +230,7 @@ describe("Server", function () {
                 assert.strictEqual(text, "text");
             });
             it("req.body should return the text sent in the body for a PATCh request", async () => {
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "PATCH",
                     body: "text"
                 });
@@ -239,7 +241,7 @@ describe("Server", function () {
         describe("The Content-Type header should determine how the body is parsed.", () => {
             it("Invalid json with Content-Type: application/json should be parsed as plain text", async () => {
                 const body = "invalid-json";
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body,
                     headers: {
@@ -251,7 +253,7 @@ describe("Server", function () {
             });
             it("Valid json with Content-Type: application/json should be parsed as json", async () => {
                 const json = JSON.stringify({ validJson: true });
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: json,
                     headers: {
@@ -262,7 +264,7 @@ describe("Server", function () {
                 assert.strictEqual(text, json);
             });
             it("Valid urlencoded string with Content-Type: application/x-www-form-urlencoded should be parsed as urlencoded string", async () => {
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: "a=1&b=2",
                     headers: {
@@ -274,7 +276,7 @@ describe("Server", function () {
             });
             it("Invalid Form Data with Content-Type: multipart/form-data should be parsed as plain text", async () => {
                 const body = "invalid-form-data";
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body,
                     headers: {
@@ -291,7 +293,7 @@ describe("Server", function () {
 
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: formData,
                     headers: {
@@ -308,7 +310,7 @@ describe("Server", function () {
 
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: formData,
                     headers: {
@@ -326,7 +328,7 @@ describe("Server", function () {
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
                 //NOTE: fetch will automatically assign the correct Content-Type and correct boundary
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: formData,
                 });
@@ -343,13 +345,173 @@ describe("Server", function () {
 
                 const expected = JSON.stringify({ a: "1", file: file.toString() });
 
-                const res = await fetch("http://127.0.0.1:5005", {
+                const res = await fetch("http://127.0.0.1:5001/test5", {
                     method: "POST",
                     body: formData,
                 });
                 const text = await res.text();
-                server.close();
                 assert.strictEqual(text, expected);
+            });
+        });
+    });
+    describe("Download", () => {
+        const file = fs.readFileSync(path.resolve(__dirname,"dummy.txt")).toString();
+        describe("Download with the 'low level' res.download method", () => {
+            it("should return the whole file if only the file is passed as a parameter and status code 200", async () => {
+                const expected = file;
+                const res = await fetch("http://127.0.0.1:5001/test6/res.download");
+                const text = await res.text();
+                assert.strictEqual(text, expected);
+                assert.strictEqual(res.status, 200);
+            });
+            it("should return everything from after the specified start position and status code 206", async () => {
+                const start = 2;
+                const expected = fs.readFileSync(path.resolve(__dirname,"dummy.txt")).toString().substring(start);
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}`);
+                const text = await res.text();
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+            });
+            it("should return everything from the start to the specified end position and status code 206", async () => {
+                const end = 5;
+                const expected = file.substring(0,end+1);
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?end=${end}`);
+                const text = await res.text();
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+            });
+            it("should return everything between the specified start and end position and status code 206", async () => {
+                const start = 2;
+                const end = 5;
+                const expected = file.substring(start,end+1);
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}&end=${end}`);
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+            });
+            it("should return status code 416 if start is greater than end", async() => {
+                const start = 10;
+                const end = start-1;
+
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}&end=${end}`);
+                
+                assert.strictEqual(res.status, 416);
+            });
+            it("should return status code 416 if start+1 is greater than the file size in bytes", async() => {
+                const start = file.length;
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}`);
+                
+                assert.strictEqual(res.status, 416);
+            });
+            it("should return status code 416 if end+1 is greater than the file size in bytes", async() => {
+                const end = file.length;
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?end=${end}`);
+                
+                assert.strictEqual(res.status, 416);
+            });
+            it("should return status code 416 if end+1 and start+1 are greater than the file size in bytes", async() => {
+                const start = file.length;
+                const end = start;
+                                
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}&end=${end}`);
+                
+                assert.strictEqual(res.status, 416);
+            });
+            it("should return status code 200 if start is equal to 0 and end+1 is equal to the file size in bytes", async () => {
+                const start = 0;
+                const end = file.length - 1;
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}&end=${end}`);
+                
+                assert.strictEqual(res.status, 200);
+            });
+            it("should return status code 200 if start is unspecified and end+1 is equal to the file size in bytes", async () => {
+                const end = file.length - 1;
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?end=${end}`);
+                
+                assert.strictEqual(res.status, 200);
+            });
+            it("should return status code 200 if start is 0 and end is unspecified", async () => {
+                const start = 0;
+                const res = await fetch(`http://127.0.0.1:5001/test6/res.download?start=${start}`);
+                
+                assert.strictEqual(res.status, 200);
+            });
+        });
+        describe("Download with the 'high level' Download class helper", () => {
+            it("should return the whole file and status code 200 if downloader.download is called", async () => {
+                const expected = file;
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.download");
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 200);
+            });
+            it("should return everything between the specified start in the Range header and the end and status code 206 if downloader.resumableDownload is called", async() => {
+                const start = 4;
+                const expected = file.substring(4);
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.resumableDownload", {
+                    headers: {
+                        "Range": `bytes=${start}-`
+                    }
+                });
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+            });
+            it("should return everything between the specified start and the specified end in the Range header and status code 206 if downloader.resumableDownload is called", async() => {
+                const start = 3;
+                const end = 10;
+                const expected = file.substring(start,end+1);
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.resumableDownload", {
+                    headers: {
+                        "Range": `bytes=${start}-${end}`
+                    }
+                });
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+            });
+            it("should return everything from the start to the length (length < file size) specified in the suffix length Range header and status code 206 if downloader.resumableDownload is called", async() => {
+                const suffixLength = 7;
+                const expected = file.substring(0,suffixLength);
+
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.resumableDownload", {
+                    headers: {
+                        "Range": `bytes=-${suffixLength}`
+                    }
+                });
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 206);
+
+            });
+            it("should return everything from the start to the length (length = file size) specified in the suffix length Range header and status code 200 if downloader.resumableDownload is called", async() => {
+                const suffixLength = file.length;
+                const expected = file;
+
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.resumableDownload", {
+                    headers: {
+                        "Range": `bytes=-${suffixLength}`
+                    }
+                });
+                const text = await res.text();
+
+                assert.strictEqual(text,expected);
+                assert.strictEqual(res.status, 200);
+            });
+            it("should return status code 416 if the length specified in the suffix length Range header is greater than the file size and downloader.resumableDownload is called", async() => {
+                const suffixLength = file.length + 1;
+
+                const res = await fetch("http://127.0.0.1:5001/test6/downloader.resumableDownload", {
+                    headers: {
+                        "Range": `bytes=-${suffixLength}`
+                    }
+                });
+                assert.strictEqual(res.status, 416);
             });
         });
     });
@@ -376,24 +538,29 @@ async function startServer(port, preparation) {
  * 
  * @param {Server} server 
  */
-function returnTestPreparation(server) {
-    server.get("/", returnTest)
-        .post("/", returnTest)
-        .put("/", returnTest)
-        .patch("/", returnTest)
-        .delete("/", returnTest);
+function allPreparations(server) {
+    [
+        returnTestPreparation,
+        extractRouteParamsPreparation,
+        extractQueryParamsPreparation,
+        multipleRoutesPreparation,
+        unhandledExceptionPreparation,
+        bodyParserPreparation,
+        downloadPreparation
+    ]
+    .forEach(fn => fn(server));
 }
 
 /**
  * 
  * @param {Server} server 
  */
-function extractRouteParamsPreparation(server) {
-    server.get("/:a/:b", extractRouteParams)
-        .post("/:a/:b", extractRouteParams)
-        .put("/:a/:b", extractRouteParams)
-        .patch("/:a/:b", extractRouteParams)
-        .delete("/:a/:b", extractRouteParams);
+function returnTestPreparation(server) {
+    server.get("/test1", returnTestHandler)
+        .post("/test1", returnTestHandler)
+        .put("/test1", returnTestHandler)
+        .patch("/test1", returnTestHandler)
+        .delete("/test1", returnTestHandler);
 }
 
 /**
@@ -401,11 +568,23 @@ function extractRouteParamsPreparation(server) {
  * @param {Server} server 
  */
 function extractQueryParamsPreparation(server) {
-    server.get("/", extractQueryParams)
-        .post("/", extractQueryParams)
-        .put("/", extractQueryParams)
-        .patch("/", extractQueryParams)
-        .delete("/", extractQueryParams);
+    server.get("/test2", extractQueryParamsHandler)
+        .post("/test2", extractQueryParamsHandler)
+        .put("/test2", extractQueryParamsHandler)
+        .patch("/test2", extractQueryParamsHandler)
+        .delete("/test2", extractQueryParamsHandler);
+}
+
+/**
+ * 
+ * @param {Server} server 
+ */
+ function extractRouteParamsPreparation(server) {
+    server.get("/test3/:a/:b", extractRouteParamsHandler)
+        .post("/test3/:a/:b", extractRouteParamsHandler)
+        .put("/test3/:a/:b", extractRouteParamsHandler)
+        .patch("/test3/:a/:b", extractRouteParamsHandler)
+        .delete("/test3/:a/:b", extractRouteParamsHandler);
 }
 
 /**
@@ -413,9 +592,9 @@ function extractQueryParamsPreparation(server) {
  * @param {Server} server 
  */
 function multipleRoutesPreparation(server) {
-    server.get("/first", returnPathname)
-        .get("/first/second", returnPathname)
-        .get("/first/second/third", returnPathname);
+    server.get("/test4/first", returnPathnameHandler)
+        .get("/test4/first/second", returnPathnameHandler)
+        .get("/test4/first/second/third", returnPathnameHandler);
 }
 
 /**
@@ -423,11 +602,25 @@ function multipleRoutesPreparation(server) {
  * @param {Server} server 
  */
 function bodyParserPreparation(server) {
-    server.get("/", returnBody)
-        .post("/", returnBody)
-        .put("/", returnBody)
-        .patch("/", returnBody)
-        .delete("/", returnBody);
+    server.get("/test5", returnBodyHandler)
+        .post("/test5", returnBodyHandler)
+        .put("/test5", returnBodyHandler)
+        .patch("/test5", returnBodyHandler)
+        .delete("/test5", returnBodyHandler);
+}
+
+function unhandledExceptionPreparation(server) {
+    server.get("/exception", (res,req) => res.nonExistantFunction());
+}
+
+/**
+ * 
+ * @param {Server} server 
+ */
+function downloadPreparation(server) {
+    server.get("/test6/res.download", downloadFileHandler);
+    server.get("/test6/downloader.download", downloadFileHandler);
+    server.get("/test6/downloader.resumableDownload", downloadFileHandler);
 }
 
 /**
@@ -435,7 +628,7 @@ function bodyParserPreparation(server) {
  * @param {Request} req 
  * @param {Response} res 
  */
-function returnTest(req, res) {
+function returnTestHandler(req, res) {
     return res.text("test");
 }
 
@@ -444,7 +637,7 @@ function returnTest(req, res) {
  * @param {Request} req 
  * @param {Response} res 
  */
-function extractQueryParams(req, res) {
+function extractQueryParamsHandler(req, res) {
     return res.text(req.query("a") + " " + req.query("b"));
 }
 
@@ -453,7 +646,7 @@ function extractQueryParams(req, res) {
  * @param {Request} req 
  * @param {Response} res 
  */
-function extractRouteParams(req, res) {
+function extractRouteParamsHandler(req, res) {
     return res.text(req.params.a + " " + req.params.b);
 }
 
@@ -462,7 +655,7 @@ function extractRouteParams(req, res) {
  * @param {Request} req 
  * @param {Response} res 
  */
-function returnPathname(req, res) {
+function returnPathnameHandler(req, res) {
     return res.text(req.pathname);
 }
 
@@ -471,7 +664,7 @@ function returnPathname(req, res) {
  * @param {Request} req 
  * @param {Response} res 
  */
-async function returnBody(req, res) {
+async function returnBodyHandler(req, res) {
     const body = req.body;
 
     if (typeof body === "object" && body !== null) {
@@ -484,4 +677,39 @@ async function returnBody(req, res) {
     }
 
     return res.text(body || "undefined");
+}
+
+/**
+ * 
+ * @param {Request} req 
+ * @param {Response} res 
+ */
+async function downloadFileHandler(req, res) {
+
+    const file = new File(path.resolve(__dirname, "dummy.txt"));
+    const file2 = new File(path.resolve(__dirname, "doesnt-exist.txt"));
+
+    if(req.pathname.endsWith("/res.download")) {
+        if(req.query("exists") === "0") {
+            return res.download(file2);
+        }
+        if(!req.query("start") && !req.query("end")) {
+            return res.download(file);
+        } else {
+            return res.download(file, {
+                start: req.query("start") == null ? null : +req.query("start"), 
+                end: req.query("end") == null ? null : +req.query("end")
+            }).catch(err => console.error(err));
+        }
+    } 
+    
+    const downloader = new Download(req,res);
+    
+    if(req.pathname.endsWith("/downloader.download")) {
+        return downloader.download(file);
+    } else if (req.pathname.endsWith("/downloader.resumableDownload")) {
+        return downloader.resumableDownload(file);
+    }
+
+    return res.end();
 }

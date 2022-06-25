@@ -183,19 +183,6 @@ Access the body of a POST,PUT or PATCH request with req.body. The body will be p
 
 <em>**For all other methods, req.body returns undefined**</em>
 
-<span style="text-decoration: underline">***CLIENT SIDE (using urlencoded)*** </span>
-
-```javascript
-fetch("http://127.0.0.1:5000/user/1", {
-    method: "PUT",
-    body: "name=bob&age=10",
-    headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-});
-
-```
-
 <span style="text-decoration: underline">***SERVER SIDE***</span>
 
 ```javascript
@@ -217,5 +204,164 @@ server.put("/user/:id", (req,res) => {
 .listen(5000,"127.0.0.1");
 ```
 
+<span style="text-decoration: underline">***CLIENT SIDE (using urlencoded)*** </span>
 
+```javascript
+fetch("http://127.0.0.1:5000/user/1", {
+    method: "PUT",
+    body: "name=bob&age=10",
+    headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+});
 
+```
+
+## Unhandled exceptions
+
+A status code 500 and no content will be sent as a response if an uncaught exception happens in one of the middlewares or handlers
+
+<span style="text-decoration: underline">***SERVER SIDE***</span>
+
+```javascript
+const Server = require("http-server-simple");
+const server = new Server();
+
+/* PUT 127.0.0.1:5000/exception */
+server.get("/exception", (req,res) => {
+    res.nonExistantFunction();
+})
+.listen(5000,"127.0.0.1");
+```
+
+<span style="text-decoration: underline">***CLIENT SIDE*** </span>
+
+```javascript
+const res = await fetch("http://127.0.0.1:5000/exception");
+
+//true
+console.log(res.status === 500);
+
+```
+
+## Download
+Downloading a file from the disk can be done in two ways. the "low level" way is with the **res.download** method and the "high level" way is with the **Download** class helper.
+
+**res.download** takes as argument a **File** object and, optionally, an object containing the start and end bytes that you would like to download.
+
+<span style="text-decoration: underline">***SERVER SIDE***</span>
+
+```javascript
+const Server = require("http-server-simple");
+const server = new Server();
+
+/* PUT 127.0.0.1:5000/download */
+server.get("/download", (req,res) => {
+    //content of file: 0123456789
+    const file = new Server.File("path/to/a/file/that/exists");
+
+    opts = {};
+    if(req.query("start")) {
+        opts.start = parseInt(req.query("start"));
+    }
+    if(req.query("end")) {
+        opts.end = parseInt(req.query("end"));
+    }
+
+    return res.download(file, opts);
+})
+.listen(5000,"127.0.0.1");
+
+```
+
+<span style="text-decoration: underline">***CLIENT SIDE*** </span>
+
+```javascript
+let res = await fetch("http://127.0.0.1:5000/download");
+let text = await res.text();
+
+//0123456789, or it will download the file on a browser that respect the Content-Disposition header
+console.log(text);
+console.log(res.status); //200
+
+res = await fetch("http://127.0.0.1:5000/download?start=2");
+text = await res.text();
+
+console.log(text); //23456789
+console.log(res.status); //206
+
+res = await fetch("http://127.0.0.1:5000/download?end=5");
+text = await res.text();
+
+console.log(text); //012345
+console.log(res.status); //206
+
+res = await fetch("http://127.0.0.1:5000/download?start=2&end=5");
+text = await res.text();
+
+console.log(text); //23456
+console.log(res.status); //206
+
+res = await fetch("http://127.0.0.1:5000/download?start=100");
+
+//416, invalid range
+console.log(res.status);
+
+```
+
+the **Download** class however only takes a **File** object or a string representing its path as argument. It looks at the Range header to determine what bytes to send.
+ 
+ <span style="text-decoration: underline">***SERVER SIDE***</span>
+
+```javascript
+const Server = require("http-server-simple");
+const server = new Server();
+
+/* PUT 127.0.0.1:5000/download */
+server.get("/download", (req,res) => {
+    //content of file: 0123456789
+    const file = "path/to/a/file/that/exists";
+    const downloader = new Server.Download(req,res);
+
+    return downloader.download(file);
+})
+.get("/resumableDownload", (req,res) => {
+    const file = "path/to/a/file/that/exists";
+    const downloader = new Server.Download(req,res);
+
+    return downloader.resumableDownload(file);
+})
+.listen(5000,"127.0.0.1");
+
+```
+<span style="text-decoration: underline">***CLIENT SIDE*** </span>
+
+```javascript
+let res = await fetch("http://127.0.0.1:5000/download");
+let text = await res.text();
+
+console.log(text); //0123456789
+console.log(res.status); //200
+
+res = await fetch("http://127.0.0.1:5000/download", {
+    headers: {
+        "Range": "bytes=2-"
+    }
+});
+text = await res.text();
+
+ //0123456789, the Range header was ignored because downloader.download() does not support resuming therefore it downloads the whole file.
+console.log(text);
+console.log(res.status); //200
+
+res = await fetch("http://127.0.0.1:5000/resumableDownload", {
+    headers: {
+        "Range": "bytes=2-"
+    }
+});
+text = await res.text();
+
+console.log(text); //23456789
+console.log(res.status) //206
+
+```

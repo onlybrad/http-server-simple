@@ -2,6 +2,15 @@ const http = require("http");
 
 /** @typedef {import("../core/Server")} Server */
 
+/** @typedef {{ start: number, end: number|undefined }} Range */
+
+/**
+ * @typedef {Object} RangeType
+ * @property {string} unit
+ * @property {Range[] | null} ranges;
+ * @property {number[] | null} suffixLengths;
+ */
+
 module.exports = class Request extends http.IncomingMessage {
     /**@type {string[]} */                
     #accept;
@@ -17,6 +26,9 @@ module.exports = class Request extends http.IncomingMessage {
 
     /**@type {Object<string,string>} */
     #cookies;
+
+    /** @type { RangeType } */
+    #range;
 
     /** @type {} */
     #server;
@@ -98,6 +110,60 @@ module.exports = class Request extends http.IncomingMessage {
         }
 
         return this.#cookies;
+    }
+
+    get range() {
+        if(this.#range) return this.#range;
+
+        if(!this.headers.range) {
+            return null;
+        }
+
+        this.#range = {};
+        
+        const rangeArr = this.headers.range.split("=");
+
+        if(!rangeArr[0]) {
+            this.#range.unit = null;
+            this.#range.ranges = null;
+            return this.#range;
+        }
+
+        this.#range.unit = rangeArr[0];
+
+        if(!rangeArr[1]) {
+            this.#range.ranges = null;
+            return this.#range;
+        } 
+
+        this.#range.ranges = [];
+        this.#range.suffixLengths = [];
+
+        const ranges = rangeArr[1].split(",").map(range => range.trim());
+
+        for(const range of ranges) {
+            const match = range.match(/^(\d*)-(\d*)$/);
+
+            if(!match || (match[1] === "" && match[2] === "")) {
+                this.#range.ranges = null;
+                this.#range.suffixLengths = null;
+                return this.#range;
+            } 
+
+            if(match[1] === "") {
+                this.#range.suffixLengths.push(+match[2]);
+            } else {
+                this.#range.ranges.push({
+                    start: +match[1], 
+                    end: match[2] === "" ? undefined : +match[2]
+                });
+            }
+        }
+
+        if(this.#range.ranges.length === 0) this.#range.ranges = null;
+        if(this.#range.suffixLengths.length === 0) this.#range.suffixLengths = null;
+
+        return this.#range;
     }
 
     get fullUrl() {

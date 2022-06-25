@@ -1,5 +1,3 @@
-const path = require("path");
-
 /** @typedef {{ parseJson: boolean, parseUrlEncoded: boolean, parseFormData: boolean }} BodyParserOptions */
 /** @typedef {import("../core/Request")} Request */
 /** @typedef {import("../core/Response")} Response */

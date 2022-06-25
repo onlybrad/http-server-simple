@@ -3,7 +3,9 @@ const path = require("path");
 const Router = require("./Router");
 const Request = require("./Request");
 const Response = require("./Response");
+const File = require("../util/File");
 const Directory = require("../util/Directory");
+const Download = require("../util/Download");
 
 /**
  * @typedef {import("./Router").Methods} Methods
@@ -25,6 +27,9 @@ const defaultOptions = {
 
 module.exports = class Server {
     static Router = Router;
+    static File = File;
+    static Directory = Directory;
+    static Download = Download;
 
     /** @type {http.Server}*/
     #server;
@@ -271,7 +276,12 @@ module.exports = class Server {
 
         if (!middlewares) return this.#notFoundHandler(req, res);
 
-        callMiddlewares(req, res, ...middlewares);
+        try {
+            await callMiddlewares(req, res, ...middlewares);
+        } catch(err) {
+            res.status(500);
+            res.end();
+        }
     }
 }
 
