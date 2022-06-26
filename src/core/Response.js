@@ -84,7 +84,7 @@ module.exports = class Response extends http.ServerResponse {
             this.setHeader("Content-Range", `bytes ${start}-${end}/${totalSize}`);
         }
 
-        this.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+        this.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
         this.setHeader("Content-Length", downloadedSize);
         return file.streamTo(this, {start,end});
     }
