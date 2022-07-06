@@ -30,7 +30,7 @@ module.exports = class Request extends http.IncomingMessage {
     /** @type { RangeType } */
     #range;
 
-    /** @type {} */
+    /** @type {Server} */
     #server;
 
     /**@type {URL} */                
@@ -42,7 +42,7 @@ module.exports = class Request extends http.IncomingMessage {
     /**
      * 
      * @param {string|undefined} key 
-     * @return {string|object}
+     * @return {string|Object<string,string>}
      */
     query(key) {
         const url = this.#getUrl();

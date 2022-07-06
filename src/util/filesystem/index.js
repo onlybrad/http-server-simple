@@ -17,7 +17,7 @@ class Directory {
 
     /**
      * 
-     * @param {string} [directory] 
+     * @param {string} [path] 
      */
     constructor(path = process.cwd()) {
         this.path = path;
@@ -63,6 +63,24 @@ class Directory {
     }
 
     /**
+     * 
+     * @param {File | string} file 
+     */
+    addFile(file) {
+        if (!(file instanceof File)) {
+            file = new File({
+                directory: this,
+                name: File.generateFilename(file),
+                originalName: file
+            });
+        }
+
+        if (!this.#files.find(f => f.name === file.name)) {
+            this.#files.push(file);
+        }
+    }
+
+    /**
      * @param {string} filename 
      * @param {string} content 
      */
@@ -85,24 +103,6 @@ class Directory {
         this.addFile(file);
 
         return file;
-    }
-
-    /**
-     * 
-     * @param {File | string} file 
-     */
-    addFile(file) {
-        if (!(file instanceof File)) {
-            file = new File({
-                directory: this,
-                name: File.generateFilename(file),
-                originalName: file
-            });
-        }
-
-        if (!this.#files.find(f => f.name === file.name)) {
-            this.#files.push(file);
-        }
     }
 
     async createDirectory(name) {
@@ -196,7 +196,7 @@ class File {
     }
 
     get extension() {
-        return path.extname(this.name);
+        return path.extname(this.name).slice(1);
     }
 
     get basename() {
@@ -225,10 +225,10 @@ class File {
             return this.#size;
         } else if (start != null && end == null) {
             return this.#size - start;
-        } else if(start == null && end != null) {
-            return end+1;
+        } else if (start == null && end != null) {
+            return end + 1;
         } else {
-            return end-start+1;
+            return end - start + 1;
         }
     }
 
@@ -241,7 +241,7 @@ class File {
         const readStream = fs.createReadStream(this.path, { start, end });
         readStream.pipe(writeStream);
 
-        return new Promise((res,rej) => {
+        return new Promise((res, rej) => {
             readStream.on("close", res);
             readStream.on("error", rej);
         });
@@ -249,7 +249,7 @@ class File {
 
     /**
      * 
-     * @param {BufferEncoding} encoding 
+     * @param {BufferEncoding} [encoding]
      */
     async read(encoding) {
         const content = await fs.promises.readFile(this.path, { encoding });

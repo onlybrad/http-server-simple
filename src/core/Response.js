@@ -9,7 +9,7 @@ module.exports = class Response extends http.ServerResponse {
      * @param {string} text 
      */
     text(text) {
-        if (!text) return this;
+        if (text == null) return this.end();
 
         if (typeof text.toString === "function") {
             text = text.toString();
@@ -26,7 +26,7 @@ module.exports = class Response extends http.ServerResponse {
      * @param {string} text 
      */
     html(text) {
-        if (!text) return this;
+        if (text == null) return this.end();
 
         if (typeof text.toString === "function") {
             text = text.toString();
@@ -43,10 +43,16 @@ module.exports = class Response extends http.ServerResponse {
      * @param {any} text 
      */
     json(text) {
+        //null is valid json, undefined isn't
         if (text === undefined) return this.end();
 
         if (typeof text === "object") {
-            text = JSON.stringify(text);
+            //to prevent error due to recursion
+            try {
+                text = JSON.stringify(text);
+            } catch(err) {
+                return this.end();
+            }
         }
 
         this.setHeader("Content-Type", "application/json");
@@ -63,6 +69,16 @@ module.exports = class Response extends http.ServerResponse {
 
     /**
      * 
+     * @param {number} code 
+     */
+    status(code) {
+        super.statusCode = code;
+
+        return this;
+    }
+
+    /**
+     * 
      * @param {File} file 
      * @param {{ start: number|null, end: number|null }} [range]
      */
@@ -70,8 +86,8 @@ module.exports = class Response extends http.ServerResponse {
         if (!file) return this.end();
 
         const totalSize = await file.getSize();
-        if(start == null) start = 0;
-        if(end == null) end = totalSize-1;
+        if (start == null) start = 0;
+        if (end == null) end = totalSize - 1;
 
         if (!isValidRange(totalSize, start, end)) {
             return this.invalidRange();
@@ -86,17 +102,7 @@ module.exports = class Response extends http.ServerResponse {
 
         this.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
         this.setHeader("Content-Length", downloadedSize);
-        return file.streamTo(this, {start,end});
-    }
-
-    /**
-     * 
-     * @param {number} code 
-     */
-    status(code) {
-        super.statusCode = code;
-
-        return this;
+        return file.streamTo(this, { start, end });
     }
 }
 

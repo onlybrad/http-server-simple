@@ -174,6 +174,9 @@ module.exports = class Server {
             req.params = routerMiddlewares.router.getParams(path, routeMiddlewares.params);
         }
 
+        /**
+         * @type {Middleware[]}
+         */
         const middlewares = [];
 
         if(this.#serverOptions.useBodyParser) {
@@ -211,7 +214,7 @@ module.exports = class Server {
      * Given the pathname, return the router+middlewares, the route+middlewares and the path associated to the router.
      * 
      * @param {string} pathname
-     * @param {string} method
+     * @param {Methods} method
      * @returns {{path: string, routerMiddlewares: RouterMiddlewares , routeMiddlewares: RouteMiddlewares } | {path: null, routerMiddlewares: null, routeMiddlewares: null}}
      */
     #getPathAndRouterAndRoute(pathname, method) {

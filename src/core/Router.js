@@ -1,6 +1,6 @@
 /** @typedef {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} Methods */
 /** @typedef {function(import("./Request"), import("./Response"), function)} Middleware */
-/** @typedef {{ path: string, params: Object<number,string>, middlewares: Middleware[] }} RouteMiddlewares */
+/** @typedef {{ path: string, params: Params, middlewares: Middleware[] }} RouteMiddlewares */
 /** @typedef {Object<number,string>} Params */
 /** @typedef {function(Router)} PrefixCallback */
 
@@ -67,7 +67,7 @@ class Router {
 
     /**
      * @param {string} path
-     * @param {string} method
+     * @param {Methods} method
      * @returns {RouteMiddlewares | null}
      */
     findRoute(path, method) {
@@ -120,6 +120,7 @@ class Router {
     #initiateRoutesArray() {
         this.#routes = methods.reduce((routes, method) => {
             routes[method] = [];
+
             return routes;
         }, {});
     }
@@ -150,13 +151,14 @@ class Router {
         const router = new this();
         router.#prefix = prefix;
         cb(router);
+
         return router;
     }
 }
 
 const methods = [
     "GET", "POST", "PUT", "PATCH", "DELETE"
-]
+];
 
 /**
  * 
