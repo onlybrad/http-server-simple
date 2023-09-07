@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { isString } = require("../../util/guard.js");
 
 class Directory {
 
@@ -17,11 +18,12 @@ class Directory {
 
     /**
      * 
-     * @param {string} [path] 
+     * @param {string} [basePath] 
      */
-    constructor(path = process.cwd()) {
-        this.path = path;
-        this.name = path.split(path.sep).pop();
+    constructor(basePath) {
+        basePath = basePath || process.cwd();
+        this.path = basePath;
+        this.name = basePath.split(path.sep).pop() || "";
     }
 
     /**
@@ -59,7 +61,7 @@ class Directory {
      * @param {string} filename 
      */
     getFile(filename) {
-        return this.#files.find(file => file.filename === filename);
+        return this.#files.find(file => file.name === filename);
     }
 
     /**
@@ -75,7 +77,7 @@ class Directory {
             });
         }
 
-        if (!this.#files.find(f => f.name === file.name)) {
+        if (!this.#files.find(f => f.name === /** @type {File} */(file).name)) {
             this.#files.push(file);
         }
     }
@@ -85,6 +87,7 @@ class Directory {
      * @param {string} content 
      */
     async createFile(filename, content) {
+        /** @type {Buffer} */
         let buffer;
         const newFilename = File.generateFilename(filename);
 
@@ -96,6 +99,7 @@ class Directory {
             if (err.code !== "EEXIST") throw err;
         }
 
+        // @ts-ignore
         await fs.promises.writeFile(path.resolve(this.#path, newFilename), buffer, "binary");
 
         const file = new File({ directory: this, originalName: filename, name: newFilename });
@@ -105,17 +109,20 @@ class Directory {
         return file;
     }
 
+    /**
+     * @param {string} name 
+     */
     async createDirectory(name) {
-        let path;
+        let directoryPath;
 
         try {
-            path = path.resolve(this.#path, name);
-            await fs.promises.mkdir(path, { recursive: true });
+            directoryPath = path.resolve(this.#path, name);
+            await fs.promises.mkdir(directoryPath, { recursive: true });
         } catch (err) {
             if (err.code !== "EEXIST") throw err;
         }
 
-        const directory = new Directory(path);
+        const directory = new Directory(directoryPath);
 
         this.#directories.push(directory);
 
@@ -158,21 +165,19 @@ class File {
      * @param {ConstructorParameters | string} params
      */
     constructor(params) {
-        let { directory, originalName, name } = params;
+        let directory, originalName, name;
 
-        if (directory && name) {
+        if(isString(params)) {
+            const pathArr = params.split(path.sep);
+            name = originalName = pathArr.pop() || "";
+            directory = new Directory(pathArr.join(path.sep));
+        } else {
+            ({directory, originalName, name } = params);
             if (!(directory instanceof Directory)) {
                 directory = new Directory(directory);
             }
+            directory.addFile(this);
         }
-
-        else {
-            const pathArr = params.split(path.sep);
-            name = originalName = pathArr.pop();
-            directory = new Directory(pathArr.join(path.sep));
-        }
-
-        directory.addFile(this);
 
         this.#directory = directory;
         this.#originalName = originalName || name;
@@ -213,9 +218,9 @@ class File {
     }
     /**
      * 
-     * @param {{ start: number|undefined, end: number|undefined }} [range]
+     * @param {{ start?: number, end?: number }} [range]
      */
-    async getSize({ start, end } = {}) {
+    async getSize({ start, end } = {start: undefined, end: undefined}) {
         if (!this.#size) {
             const stat = await fs.promises.stat(this.path);
             this.#size = stat.size;
@@ -227,9 +232,11 @@ class File {
             return this.#size - start;
         } else if (start == null && end != null) {
             return end + 1;
-        } else {
+        } else if(start != null && end != null){
             return end - start + 1;
         }
+        
+        throw new Error("Unreachable code");
     }
 
     /**
@@ -237,8 +244,9 @@ class File {
      * @param {WritableStream} writeStream 
      * @param {{ start: number, end: number }} [range]
      */
-    streamTo(writeStream, { start, end } = {}) {
+    streamTo(writeStream, { start, end } = {start: 0, end: 0}) {
         const readStream = fs.createReadStream(this.path, { start, end });
+        //@ts-ignore
         readStream.pipe(writeStream);
 
         return new Promise((res, rej) => {

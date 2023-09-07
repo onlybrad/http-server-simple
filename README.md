@@ -1,11 +1,11 @@
 http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library.
 
-The following methods are supported: GET, POST, PUT, PATCH, DELETE.
+The following methods are supported: GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE.
 
 ## Usage
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server} = require("http-server-simple");
 const server = new Server();
 
 /* GET 127.0.0.1:5000/text */
@@ -34,9 +34,9 @@ Server level routing done in the previous example will implicitly create a route
 
 ```javascript
 
-const Server = require("http-server-simple");
+const {Server, Router} = require("http-server-simple");
 const server = new Server();
-const router = new Server.Router();
+const router = new Router();
 const users = require("./data/users");
 
 /* GET 127.0.0.1:5000/user */
@@ -64,13 +64,13 @@ server.router("/user",router).listen(5000,"127.0.0.1");
 In order to create routes within the router with the same prefix without having to repeat the prefix in each route, you can use Router.prefix()
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server, Router} = require("http-server-simple");
 const server = new Server();
-const router = new Server.Router();
+const router = new Router();
 const users = require("./data/users");
 const posts = require("./data/posts");
 
-const userRouter = Server.Router.prefix("/user", router => {
+const userRouter = Router.prefix("/user", router => {
     /* GET 127.0.0.1:5000/api/v1/user */
     router.get("/", (req,res) => res.json(users))
 
@@ -78,7 +78,7 @@ const userRouter = Server.Router.prefix("/user", router => {
     .get("/:id", (req,res) => res.json(users[req.params.id]));
 });
 
-const postRouter = Server.Router.prefix("/post", router => {
+const postRouter = Router.prefix("/post", router => {
     /* GET 127.0.0.1:5000/api/v1/post */
     router.get("/", (req,res) => res.json(posts))
 
@@ -98,9 +98,9 @@ Route handlers are considered middlewares too. The only difference between a mid
 
 ```javascript 
 
-const Server = require("http-server-simple");
+const {Server, Router} = require("http-server-simple");
 const server = new Server();
-const router = new Server.Router();
+const router = new Router();
 
 server.router("/router",router,(req,res,next) => {
     console.log("Router middlewares will execute before routes middlewares.");
@@ -144,7 +144,7 @@ Use the req.query function to get the query parameters from the url
 
 ```javascript
 
-const Server = require("http-server-simple");
+const {Server} = require("http-server-simple");
 const server = new Server();
 
 /* GET 127.0.0.1:5000/?a=1&b=2 */
@@ -164,7 +164,7 @@ Access the dictionary of route parameters with the req.params attribute
 
 ```javascript
 
-const Server = require("http-server-simple");
+const {Server} = require("http-server-simple");
 const server = new Server();
 
 /* GET 127.0.0.1:5000/user/:id */
@@ -186,7 +186,7 @@ Access the body of a POST,PUT or PATCH request with req.body. The body will be p
 <span style="text-decoration: underline">***SERVER SIDE***</span>
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server} = require("http-server-simple");
 const server = new Server();
 const users = require("./data/users");
 
@@ -224,7 +224,7 @@ A status code 500 and no content will be sent as a response if an uncaught excep
 <span style="text-decoration: underline">***SERVER SIDE***</span>
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server} = require("http-server-simple");
 const server = new Server();
 
 /* PUT 127.0.0.1:5000/exception */
@@ -252,13 +252,13 @@ Downloading a file from the disk can be done in two ways. the "low level" way is
 <span style="text-decoration: underline">***SERVER SIDE***</span>
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server, File} = require("http-server-simple");
 const server = new Server();
 
 /* PUT 127.0.0.1:5000/download */
 server.get("/download", (req,res) => {
     //content of file: 0123456789
-    const file = new Server.File("path/to/a/file/that/exists");
+    const file = new File("path/to/a/file/that/exists");
 
     opts = {};
     if(req.query("start")) {
@@ -314,20 +314,20 @@ the **Download** class however only takes a **File** object or a string represen
  <span style="text-decoration: underline">***SERVER SIDE***</span>
 
 ```javascript
-const Server = require("http-server-simple");
+const {Server, Download} = require("http-server-simple");
 const server = new Server();
 
 /* PUT 127.0.0.1:5000/download */
 server.get("/download", (req,res) => {
     //content of file: 0123456789
     const file = "path/to/a/file/that/exists";
-    const downloader = new Server.Download(req,res);
+    const downloader = new Download(req,res);
 
     return downloader.download(file);
 })
 .get("/resumableDownload", (req,res) => {
     const file = "path/to/a/file/that/exists";
-    const downloader = new Server.Download(req,res);
+    const downloader = new Download(req,res);
 
     return downloader.resumableDownload(file);
 })

@@ -1,15 +1,16 @@
 const http = require("http");
 
-/** @typedef {import("../util/File")} File */
+/** @typedef {import("./File")} File */
 
 module.exports = class Response extends http.ServerResponse {
 
     /**
-     * 
      * @param {string} text 
      */
     text(text) {
-        if (text == null) return this.end();
+        if (text == null) {
+            return this.end();
+        }
 
         if (typeof text.toString === "function") {
             text = text.toString();
@@ -26,7 +27,9 @@ module.exports = class Response extends http.ServerResponse {
      * @param {string} text 
      */
     html(text) {
-        if (text == null) return this.end();
+        if (text == null) {
+            return this.end();
+        }
 
         if (typeof text.toString === "function") {
             text = text.toString();
@@ -44,7 +47,9 @@ module.exports = class Response extends http.ServerResponse {
      */
     json(text) {
         //null is valid json, undefined isn't
-        if (text === undefined) return this.end();
+        if (text === undefined) {
+            return this.end();
+        }
 
         if (typeof text === "object") {
             //to prevent error due to recursion
@@ -80,14 +85,17 @@ module.exports = class Response extends http.ServerResponse {
     /**
      * 
      * @param {File} file 
-     * @param {{ start: number|null, end: number|null }} [range]
+     * @param {{ start?: number, end?: number }} [range]
      */
-    async download(file, { start, end } = {}) {
-        if (!file) return this.end();
-
+    async download(file, { start, end } = {start: undefined, end: undefined}) {
         const totalSize = await file.getSize();
-        if (start == null) start = 0;
-        if (end == null) end = totalSize - 1;
+        if (start == null) {
+            start = 0;
+        }
+
+        if (end == null) {
+            end = totalSize - 1;
+        }
 
         if (!isValidRange(totalSize, start, end)) {
             return this.invalidRange();
@@ -101,7 +109,9 @@ module.exports = class Response extends http.ServerResponse {
         }
 
         this.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
+
         this.setHeader("Content-Length", downloadedSize);
+        //@ts-ignore
         return file.streamTo(this, { start, end });
     }
 }
@@ -117,7 +127,9 @@ function isValidRange(totalSize, start, end) {
         return false;
     }
 
-    if (start > end) return false;
+    if (start > end) {
+        return false;
+    }
 
     return true;
 }

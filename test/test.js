@@ -1,13 +1,7 @@
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
-const Server = require("../src/core/Server");
-const File = require("../src/util/File");
-const Download = require("../src/util/Download");
-
-/** @typedef {import("../src/core/Request")} Request */
-/** @typedef {import("../src/core/Response")} Response */
-
+const {Server, Request, Response, File, Download} = require("../src/index.js");
 
 describe("Server", async function () {
     /** @type {Server} */
@@ -288,8 +282,8 @@ describe("Server", async function () {
             });
             it("Valid Form Data with no boundary passed to Content-Type: multipart/form-data should parse the body as plain text.", async () => {
                 const formData = new FormData();
-                formData.append("a", 1);
-                formData.append("b", 2);
+                formData.append("a", "1");
+                formData.append("b", "2");
 
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
@@ -305,8 +299,8 @@ describe("Server", async function () {
             });
             it("Valid Form Data with wrong boundary passed to Content-Type: multipart/form-data should parse the body as plain text.", async () => {
                 const formData = new FormData();
-                formData.append("a", 1);
-                formData.append("b", 2);
+                formData.append("a", "1");
+                formData.append("b", "2");
 
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
@@ -322,8 +316,8 @@ describe("Server", async function () {
             });
             it("Valid Form Data with Content-Type: multipart/form-data and valid boundary should be parsed as Form Data", async () => {
                 const formData = new FormData();
-                formData.append("a", 1);
-                formData.append("b", 2);
+                formData.append("a", "1");
+                formData.append("b", "2");
 
                 const expected = JSON.stringify(Object.fromEntries(formData));
 
@@ -340,7 +334,7 @@ describe("Server", async function () {
                 const blob = new Blob([file]);
                 const formData = new FormData();
 
-                formData.append("a", 1);
+                formData.append("a", "1");
                 formData.append("file", blob, "dummy.txt");
 
                 const expected = JSON.stringify({ a: "1", file: file.toString() });
@@ -519,7 +513,7 @@ describe("Server", async function () {
 
 /**
  * @param {number} port
- * @param {function(Server)} preparation 
+ * @param {(server: Server) => void} [preparation] 
  * @return {Promise<Server>}
  */
 async function startServer(port, preparation) {
@@ -609,7 +603,11 @@ function bodyParserPreparation(server) {
         .delete("/test5", returnBodyHandler);
 }
 
+/**
+ * @param {Server} server 
+ */
 function unhandledExceptionPreparation(server) {
+    // @ts-ignore
     server.get("/exception", (res,req) => res.nonExistantFunction());
 }
 
@@ -668,7 +666,7 @@ async function returnBodyHandler(req, res) {
     const body = req.body;
 
     if (typeof body === "object" && body !== null) {
-        for ([key, value] of Object.entries(body)) {
+        for (const [key, value] of Object.entries(body)) {
             if (value instanceof File) {
                 body[key] = await value.read();
             }
@@ -676,11 +674,11 @@ async function returnBodyHandler(req, res) {
         return res.json(body);
     }
 
+    //@ts-ignore
     return res.text(body || "undefined");
 }
 
 /**
- * 
  * @param {Request} req 
  * @param {Response} res 
  */
@@ -697,8 +695,10 @@ async function downloadFileHandler(req, res) {
             return res.download(file);
         } else {
             return res.download(file, {
-                start: req.query("start") == null ? null : +req.query("start"), 
-                end: req.query("end") == null ? null : +req.query("end")
+                // @ts-ignore
+                start: req.query("start") == null ? undefined : parseInt(req.query("start")), 
+                // @ts-ignore
+                end: req.query("end") == null ? undefined : parseInt(req.query("end"))
             }).catch(err => console.error(err));
         }
     } 

@@ -3,12 +3,11 @@ const path = require("path");
 const Router = require("./Router");
 const Request = require("./Request");
 const Response = require("./Response");
-const File = require("../util/File");
-const Directory = require("../util/Directory");
-const Download = require("../util/Download");
+const Directory = require("./Directory");
+const { isSupportedMethod } = require("../util/guard.js");
 
 /**
- * @typedef {import("./Router").Methods} Methods
+ * @typedef {import("../util/types.js").Method} Method
  * @typedef {import("./Router").RouteMiddlewares} RouteMiddlewares
  * @typedef {import("./Router").Middleware} Middleware
  * @typedef {import("./Router").Params} Params
@@ -16,20 +15,16 @@ const Download = require("../util/Download");
  * 
  * @typedef {{router: Router, middlewares: Middleware[]}} RouterMiddlewares
  * @typedef {{routers: Router[], middlewares: Middleware[]}} RoutersMiddlewares
- * @typedef {{ useBodyParser: boolean, bodyParserOptions: BodyParserOptions }} ServerOptions
+ * @typedef {{ useBodyParser: boolean, bodyParserOptions?: BodyParserOptions }} ServerOpts
  */
 
-/** @type {ServerOptions} */
+/** @type {ServerOpts} */
 const defaultOptions = {
     useBodyParser: true,
     bodyParserOptions: undefined
 }
 
 module.exports = class Server {
-    static Router = Router;
-    static File = File;
-    static Directory = Directory;
-    static Download = Download;
 
     /** @type {http.Server}*/
     #server;
@@ -40,7 +35,7 @@ module.exports = class Server {
     /** @type {Object<string, RoutersMiddlewares>}} */
     #routers = {};
 
-    /** @type {ServerOptions} */
+    /** @type {ServerOpts} */
     #serverOptions;
 
     /** @type {Directory} */
@@ -48,7 +43,7 @@ module.exports = class Server {
 
     /**
      * 
-     * @param {ServerOptions} [serverOptions]
+     * @param {ServerOpts} [serverOptions]
      */
     constructor(serverOptions = defaultOptions) {
         this.#serverOptions = serverOptions;
@@ -61,6 +56,7 @@ module.exports = class Server {
 
         this.#createTempDirectories();
 
+        //@ts-ignore
         this.#server = http.createServer(options, (req, res) => this.#serverHandler(req, res));
 
         process.on("SIGINT", async () => {
@@ -85,13 +81,15 @@ module.exports = class Server {
     /**
      * 
      * @param {string} root 
-     * @param {Router[]} routers
-     * @param {Middleware[]} [middlewares]
+     * @param {Router[]|Router} routers
+     * @param {Middleware[]} middlewares
      */
     router(root, routers, ...middlewares) {
-        if (!root) return;
+        if (!root) {
+            return;
+        }
 
-        if(!Array.isArray(routers)) {
+        if (!Array.isArray(routers)) {
             routers = [routers];
         }
 
@@ -141,14 +139,29 @@ module.exports = class Server {
     }
 
     /**
+     * @param {string} path
+     * @param {Middleware[]} middlewares 
+     */
+    head(path, ...middlewares) {
+        return this.#addRoute("HEAD", path, ...middlewares);
+    }
+
+    /**
+     * @param {string} path
+     * @param {Middleware[]} middlewares 
+     */
+    options(path, ...middlewares) {
+        return this.#addRoute("OPTIONS", path, ...middlewares);
+    }
+
+    /**
      * 
      * @param {number} port 
-     * @param {string | undefined} host 
+     * @param {string} [host]
+     * @param {() => any} [cb]
      */
-    listen(port, host) {
-        return new Promise(res => {
-            this.#server.listen(port, host, res);
-        });
+    listen(port, host, cb) {
+        this.#server.listen(port, host, cb);
     }
 
     close() {
@@ -166,9 +179,15 @@ module.exports = class Server {
      * @param {Request} req 
      */
     #getMiddlewares(req) {
+        if(!req.method || !isSupportedMethod(req.method)) {
+            return [];
+        }
+
         const { path, routerMiddlewares, routeMiddlewares } = this.#getPathAndRouterAndRoute(req.pathname, req.method);
 
-        if(!routerMiddlewares) return null;
+        if (!routerMiddlewares) {
+            return [];
+        }
 
         if (Object.keys(routeMiddlewares.params).length > 0) {
             req.params = routerMiddlewares.router.getParams(path, routeMiddlewares.params);
@@ -179,18 +198,20 @@ module.exports = class Server {
          */
         const middlewares = [];
 
-        if(this.#serverOptions.useBodyParser) {
+        if (this.#serverOptions.useBodyParser) {
             const bodyParser = require("../middlewares/bodyParser");
+            //TODO not sure why (req, res, next) => void is not assignable to (req, res, next?) => void
+            //@ts-ignore
             middlewares.push(bodyParser(this.#serverOptions.bodyParserOptions));
         }
-        
+
         middlewares.push(...routerMiddlewares.middlewares, ...routeMiddlewares.middlewares);
 
         return middlewares;
     }
 
     /**
-     * @param {Methods} method
+     * @param {Method} method
      * @param {string} path
      * @param {Middleware[]} middlewares
      */
@@ -214,31 +235,33 @@ module.exports = class Server {
      * Given the pathname, return the router+middlewares, the route+middlewares and the path associated to the router.
      * 
      * @param {string} pathname
-     * @param {Methods} method
+     * @param {Method} method
      * @returns {{path: string, routerMiddlewares: RouterMiddlewares , routeMiddlewares: RouteMiddlewares } | {path: null, routerMiddlewares: null, routeMiddlewares: null}}
      */
     #getPathAndRouterAndRoute(pathname, method) {
         const nullReturn = { path: null, routerMiddlewares: null, routeMiddlewares: null };
         const rootsAndPaths = this.#getRouterRootsAndPaths(pathname);
 
-        if (!rootsAndPaths.length === 0) return nullReturn;
+        if (rootsAndPaths.length === 0) {
+            return nullReturn;
+        }
 
         for (const rootAndPath of rootsAndPaths) {
             const { root, path } = rootAndPath;
             const routersMiddlewares = this.#routers[root];
-            
-            for(const router of routersMiddlewares.routers) {
+
+            for (const router of routersMiddlewares.routers) {
                 const routeMiddlewares = router.findRoute(path, method);
 
                 if (routeMiddlewares) {
                     return {
                         path,
-                        routerMiddlewares:{router, middlewares: routersMiddlewares.middlewares},
+                        routerMiddlewares: { router, middlewares: routersMiddlewares.middlewares },
                         routeMiddlewares
                     };
                 }
             }
-        
+
         }
 
         return nullReturn;
@@ -250,7 +273,7 @@ module.exports = class Server {
      * @param {string} pathname 
      */
     #getRouterRootsAndPaths(pathname) {
-        const splitPath = pathname.split("/").map(word => (word.endsWith("/") ? word.slice(0,-1) : word));
+        const splitPath = pathname.split("/").map(word => (word.endsWith("/") ? word.slice(0, -1) : word));
         const result = [];
 
         for (let i = 0; i < splitPath.length; i++) {
@@ -277,11 +300,13 @@ module.exports = class Server {
 
         const middlewares = this.#getMiddlewares(req);
 
-        if (!middlewares) return this.#notFoundHandler(req, res);
+        if (middlewares.length === 0) {
+            return this.#notFoundHandler(req, res);
+        }
 
         try {
             await callMiddlewares(req, res, ...middlewares);
-        } catch(err) {
+        } catch (err) {
             res.status(500);
             res.end();
         }
@@ -294,13 +319,17 @@ module.exports = class Server {
  * @param {Response} res 
  * @param  {Middleware[]} middlewares 
  */
- async function callMiddlewares(req, res, ...middlewares) {
-    if (middlewares.length === 0) return null;
-    if (middlewares.length === 1) return await (middlewares[0](req, res));
+async function callMiddlewares(req, res, ...middlewares) {
+    if (middlewares.length === 0) {
+        return;
+    }
+    if (middlewares.length === 1) {
+        return middlewares[0](req, res);
+    }
 
     const next = getNext(req, res, middlewares, 0);
 
-    await (middlewares[0](req, res, next));
+    return middlewares[0](req, res, next);
 }
 
 
@@ -309,14 +338,13 @@ module.exports = class Server {
  * @param {Response} res
  * @param {Middleware[]} middlewares 
  * @param {number} index 
- * @returns {Function}
  */
 function getNext(req, res, middlewares, index) {
     return async function () {
         if (typeof middlewares[index + 1] === "function") {
             const next = getNext(req, res, middlewares, index + 1);
 
-            return await middlewares[index + 1](req, res, next);
+            return middlewares[index + 1](req, res, next);
         }
     }
 }

@@ -2,6 +2,8 @@
 /** @typedef {import("../core/Request")} Request */
 /** @typedef {import("../core/Response")} Response */
 
+const { isBufferEncoding } = require("../util/guard.js");
+
 const APPLICATION_JSON = "application/json";
 const URLENCODED = "application/x-www-form-urlencoded";
 const FORMDATA = "multipart/form-data";
@@ -17,22 +19,30 @@ module.exports =
 
 function ({ parseJson, parseUrlEncoded, parseFormData } = defaultOptions) {
     /**
-     * 
      * @param {Request} req 
      * @param {Response} res
-     * @param {Function} next 
+     * @param {() => Promise<void>} next 
      */
     return function bodyParser(req, res, next) {
-        if (!["PUT", "POST", "PATCH"].includes(req.method)) {
+        if (!["PUT", "POST", "PATCH"].includes(req.method || "")) {
             return next();
         }
 
         switch (req.contentType) {
-            case APPLICATION_JSON: if (!parseJson) return next(); break;
-            case URLENCODED: if (!parseUrlEncoded) return next(); break;
-            case FORMDATA: if (!parseFormData) return next(); req.setEncoding('latin1'); break;
+            case APPLICATION_JSON: if (!parseJson) {
+                return next();
+            } break;
+            case URLENCODED: if (!parseUrlEncoded) {
+                return next();
+            } break;
+            case FORMDATA: if (!parseFormData) {
+                return next();
+            } 
+            
+            req.setEncoding('latin1'); break;
         }
 
+        //TODO: make this work with very large bodies
         let body = "";
 
         req.on("data", chunk => body += chunk)
@@ -58,10 +68,10 @@ async function parseBody(req, body) {
             case FORMDATA:
                 return await parseFormData(req, body);
             default:
-                return body.toString(req.charset);
+                return body.toString();
         }
     } catch (err) {
-        return body.toString(req.charset);
+        return body.toString();
     }
 }
 
@@ -89,9 +99,13 @@ async function parseFormData(req, body) {
 
         const [, name, filename, contentType, value] = match;
 
-        parsedBody[name] = filename ?
-            await req.server.temp.createFile(filename, value) :
-            Buffer.from(value, 'latin1').toString(req.charset);
+        if(filename) {
+            parsedBody[name] = await req.server.temp.createFile(filename, value)
+        } else {
+            parsedBody[name] = isBufferEncoding(req.charset) ?
+                Buffer.from(value, 'latin1').toString(req.charset) :
+                undefined;
+        }
     }
 
     return parsedBody;

@@ -44,8 +44,9 @@ class Download {
             return this.#res.download(file,{start,end});
         }
 
-        const end = this.#req.range.suffixLengths[0] - 1;
-        return this.#res.download(file,{end});
+        const end = this.#req.range?.suffixLengths;
+
+        return this.#res.download(file,{end: end ? end[0] - 1 : undefined});
     }
 
     /**
@@ -60,10 +61,14 @@ class Download {
     }
 
     #isValidRange() {
-        if(!this.#req.range.unit || this.#req.range.unit !== "bytes") return false;
-    
-        if(this.#req.range.ranges === null && this.#req.range.suffixLengths === null) return false;
-    
+        if(!this.#req.range?.unit || this.#req.range.unit !== "bytes") {
+            return false;
+        }
+
+        if(this.#req.range.ranges === null && this.#req.range.suffixLengths === null) {
+            return false;
+        }
+            
         return true;
     }
 }

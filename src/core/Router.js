@@ -1,14 +1,14 @@
-/** @typedef {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} Methods */
-/** @typedef {function(import("./Request"), import("./Response"), function)} Middleware */
+/** @typedef {(request: import("./Request"), response: import("./Response"), next?: () => Promise<void>) => void} Middleware */
 /** @typedef {{ path: string, params: Params, middlewares: Middleware[] }} RouteMiddlewares */
-/** @typedef {Object<number,string>} Params */
-/** @typedef {function(Router)} PrefixCallback */
+/** @typedef {Record<number,string>} Params */
+/** @typedef {(router: Router) => void} PrefixCallback */
+
+const { SUPPORTED_METHODS } = require("../util/types.js");
 
 class Router {
 
-    /** @type {RouteMiddlewares[]} */
-    #routes = [];
-
+    /** @type {Record<import("../util/types.js").Method,RouteMiddlewares[]>} */
+    #routes;
     #prefix = "";
 
     constructor() {
@@ -67,11 +67,33 @@ class Router {
 
     /**
      * @param {string} path
-     * @param {Methods} method
+     * @param {Middleware[]} middlewares 
+     */
+    head(path, ...middlewares) {
+        this.addRoute("HEAD", path, ...middlewares);
+
+        return this;
+    }
+
+    /**
+     * @param {string} path
+     * @param {Middleware[]} middlewares 
+     */
+    options(path, ...middlewares) {
+        this.addRoute("OPTIONS", path, ...middlewares);
+
+        return this;
+    }
+
+    /**
+     * @param {string} path
+     * @param {import("../util/types.js").Method} method
      * @returns {RouteMiddlewares | null}
      */
     findRoute(path, method) {
-        if(!path.startsWith(this.#prefix)) return null;
+        if(!path.startsWith(this.#prefix)) {
+            return null;
+        }
 
         path = path.slice(this.#prefix.length);
         path = path.charAt(0) === "/" ? path : "/"+path;
@@ -80,7 +102,6 @@ class Router {
             path = path.endsWith("/") ? path.slice(0,-1) : path;
         }
 
-        /** @type {RouteMiddlewares} */
         const routes = this.#routes[method];
 
         return routes.find(
@@ -92,12 +113,12 @@ class Router {
     }
 
     /**
-     * @param {Methods} method
+     * @param {import("../util/types.js").Method} method
      * @param {string} path
      * @param {Middleware[]} middlewares 
      */
     addRoute(method, path, ...middlewares) {
-        if (!methods.includes(method) || !path) {
+        if (!path) {
             return;
         }
 
@@ -118,11 +139,15 @@ class Router {
     }
 
     #initiateRoutesArray() {
-        this.#routes = methods.reduce((routes, method) => {
+        /** @type {Record<import("../util/types.js").Method,RouteMiddlewares[]>} */
+        //@ts-ignore
+        const routes = {};
+
+        this.#routes = SUPPORTED_METHODS.reduce((routes, method) => {
             routes[method] = [];
 
             return routes;
-        }, {});
+        }, routes);
     }
 
     /**
@@ -134,6 +159,7 @@ class Router {
         path = path.slice(this.#prefix.length);
 
         const pathArr = path.split("/").splice(1);
+        /** @type {Record<string,string>} */
         const params = {}
 
         Object.entries(routeParams).forEach(([i, param]) => {
@@ -156,25 +182,21 @@ class Router {
     }
 }
 
-const methods = [
-    "GET", "POST", "PUT", "PATCH", "DELETE"
-];
-
 /**
  * 
  * @param {string} routerPath 
  * @param {string} path 
  */
 function matchParams(routerPath, path) {
-    routerPath = routerPath.split("/").splice(1);
-    path = path.split("/").splice(1);
+    const routerPathArray = routerPath.split("/").splice(1);
+    const pathArray = path.split("/").splice(1);
 
-    if(routerPath.length !== path.length) {
+    if(routerPathArray.length !== pathArray.length) {
         return false;
     }
 
-    for(let i=0;i<routerPath.length;i++) {
-        if(routerPath[i] !== path[i] && !routerPath[i].startsWith(":")) {
+    for(let i=0;i<routerPathArray.length;i++) {
+        if(routerPathArray[i] !== pathArray[i] && !routerPathArray[i].startsWith(":")) {
             return false;
         }
     }
