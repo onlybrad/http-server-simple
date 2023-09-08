@@ -84,6 +84,10 @@ module.exports = class Request extends http.IncomingMessage {
         return this.accept.includes("text/html") || this.accept.includes("application/xhtml+xml");
     }
 
+    get wantsAny() {
+        return this.accept.includes("*/*");
+    }
+
     get contentType() {
         return this.#getContentType()[0] || null;
     }
