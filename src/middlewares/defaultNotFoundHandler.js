@@ -7,7 +7,7 @@ function defaultNotFoundHandler(req, res) {
     res = res.status(404);
     const message = "404 Page Not Found.";
     
-    if(req.wantsHtml()) {
+    if(req.wantsHtml) {
         return res.html(`<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -21,11 +21,11 @@ function defaultNotFoundHandler(req, res) {
         </html>`);
     }
 
-    if(req.wantsJson()) {
+    if(req.wantsJson) {
         return res.json({message});
     }
 
-    if(req.wantsXml()) {
+    if(req.wantsXml) {
         return res.setHeader("Content-type", "application/xml")
             .text(`<?xml version='1.0' encoding='UTF-8'?><message>${message}</message>`)
     }
