@@ -14,6 +14,7 @@ declare class Request extends http.IncomingMessage {
     get wantsJson(): boolean;
     get wantsXml(): boolean;
     get wantsHtml(): boolean;
+    get wantsAny(): boolean;
     get contentType(): string;
     get charset(): string;
     get boundary(): string;
