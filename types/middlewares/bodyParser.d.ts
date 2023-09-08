@@ -1,4 +1,4 @@
-declare function _exports({ parseJson, parseUrlEncoded, parseFormData }?: BodyParserOptions): (req: Request, res: Response, next: Function) => any;
+declare function _exports({ parseJson, parseUrlEncoded, parseFormData }?: BodyParserOptions): (req: Request, res: Response, next: () => Promise<void>) => Promise<void>;
 export = _exports;
 export type BodyParserOptions = {
     parseJson: boolean;

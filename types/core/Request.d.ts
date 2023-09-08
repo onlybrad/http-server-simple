@@ -1,5 +1,6 @@
+/// <reference types="node" />
 export = Request;
-declare class Request {
+declare class Request extends http.IncomingMessage {
     /**@type {Record<string,string>} */
     params: Record<string, string>;
     /** @type {unknown} */
@@ -10,9 +11,9 @@ declare class Request {
      */
     query(key?: string): string | Record<string, string> | null;
     get accept(): string[];
-    get wantsJson(): any;
-    get wantsXml(): any;
-    get wantsHtml(): any;
+    get wantsJson(): boolean;
+    get wantsXml(): boolean;
+    get wantsHtml(): boolean;
     get contentType(): string;
     get charset(): string;
     get boundary(): string;
@@ -30,6 +31,7 @@ declare class Request {
 declare namespace Request {
     export { Server, Range, RangeType };
 }
+import http = require("http");
 type RangeType = {
     unit: string | null;
     /**

@@ -57,10 +57,11 @@ declare class Server {
     /**
      *
      * @param {number} port
-     * @param {string | undefined} host
+     * @param {string} [host]
+     * @param {() => any} [cb]
      */
-    listen(port: number, host: string | undefined): any;
-    close(): any;
+    listen(port: number, host?: string, cb?: () => any): void;
+    close(): Promise<any>;
     #private;
 }
 declare namespace Server {

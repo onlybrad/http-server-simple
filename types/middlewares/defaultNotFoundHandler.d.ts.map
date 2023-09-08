@@ -1,1 +1,1 @@
-{"version":3,"file":"defaultNotFoundHandler.d.ts","sourceRoot":"","sources":["../../src/middlewares/defaultNotFoundHandler.js"],"names":[],"mappings":"AACA;;;GAGG;AACH,mDAEC"}
+{"version":3,"file":"defaultNotFoundHandler.d.ts","sourceRoot":"","sources":["../../src/middlewares/defaultNotFoundHandler.js"],"names":[],"mappings":"AACA;;;GAGG;AACH,+BAHW,OAAO,iBAAiB,CAAC,OACzB,OAAO,kBAAkB,CAAC,8BA8BpC"}

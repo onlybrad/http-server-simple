@@ -23,12 +23,12 @@ export class Directory {
      *
      * @param {string} name
      */
-    getDirectory(name: string): any;
+    getDirectory(name: string): Directory;
     /**
      *
      * @param {string} filename
      */
-    getFile(filename: string): any;
+    getFile(filename: string): File;
     /**
      *
      * @param {File | string} file
@@ -65,9 +65,9 @@ export class File {
     get directory(): Directory;
     get originalName(): string;
     get name(): string;
-    get path(): any;
-    get extension(): any;
-    get basename(): any;
+    get path(): string;
+    get extension(): string;
+    get basename(): string;
     exists(): Promise<boolean>;
     /**
      *
@@ -85,12 +85,12 @@ export class File {
     streamTo(writeStream: WritableStream, { start, end }?: {
         start: number;
         end: number;
-    }): any;
+    }): Promise<any>;
     /**
      *
      * @param {BufferEncoding} [encoding]
      */
-    read(encoding?: BufferEncoding): Promise<any>;
+    read(encoding?: BufferEncoding): Promise<string>;
     #private;
 }
 //# sourceMappingURL=index.d.ts.map

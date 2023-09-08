@@ -11,7 +11,7 @@ declare class MemoryCache<T> {
     /**
      * @param {string} key
      */
-    has(key: string): any;
+    has(key: string): boolean;
     /**
      * @param {string} key
      */
@@ -19,7 +19,7 @@ declare class MemoryCache<T> {
     /**
      * @param {string} key
      */
-    get(key: string): any;
+    get(key: string): T;
     #private;
 }
 //# sourceMappingURL=MemoryCache.d.ts.map

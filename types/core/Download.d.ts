@@ -9,7 +9,7 @@ declare class Download {
      *
      * @param {File | string} file
      */
-    resumableDownload(file: File | string): any;
+    resumableDownload(file: File | string): Promise<any>;
     /**
      *
      * @param {File | string} file
