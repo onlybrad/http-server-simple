@@ -43,8 +43,15 @@ module.exports = class Request extends http.IncomingMessage {
     body;
 
     /**
-     * @param {string} [key] 
-     * @return {string|Record<string,string>|null}
+     * @overload
+     * @param {string} key
+     * @return {string | null}
+     * 
+     * @overload
+     * @return {Record<string,string>}
+     *
+     * @param {string} [key]
+     * @return {(string | null) | Record<string,string>} 
      */
     query(key) {
         const url = this.#getUrl();

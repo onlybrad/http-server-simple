@@ -1,6 +1,6 @@
 {
   "name": "http-server-simple",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "http-server-simple is an http server written in pure javascript for NodeJS. It has no dependencies. The syntaxe was inspired by the Express library.",
   "main": "src/index.js",
   "scripts": {

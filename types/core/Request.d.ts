@@ -6,10 +6,29 @@ declare class Request extends http.IncomingMessage {
     /** @type {unknown} */
     body: unknown;
     /**
+     * @overload
+     * @param {string} key
+     * @return {string | null}
+     *
+     * @overload
+     * @return {Record<string,string>}
+     *
      * @param {string} [key]
-     * @return {string|Record<string,string>|null}
+     * @return {(string | null) | Record<string,string>}
      */
-    query(key?: string): string | Record<string, string> | null;
+    query(key: string): string | null;
+    /**
+     * @overload
+     * @param {string} key
+     * @return {string | null}
+     *
+     * @overload
+     * @return {Record<string,string>}
+     *
+     * @param {string} [key]
+     * @return {(string | null) | Record<string,string>}
+     */
+    query(): Record<string, string>;
     get accept(): string[];
     get wantsJson(): boolean;
     get wantsXml(): boolean;
